@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
@@ -49,6 +50,7 @@ import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.Nullable;
 
@@ -367,10 +369,11 @@ public class HatchableEggBlock extends DragonEggBlock implements EntityBlock, Si
 
             // ensure a breed exists for this egg. if not, assign a random one.
             // possible cause is through commands, or other unnatural means.
-            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            // todo: find a better way
+            RegistryAccess reg = DistExecutor.safeRunForDist(() -> Minecraft.getInstance().level::registryAccess, () -> ServerLifecycleHooks.getCurrentServer()::registryAccess);
             Holder<DragonBreed> breed = stack.get(DMLRegistry.DRAGON_BREED_COMPONENT.get());
-            if (breed == null && server != null)
-                setBreed(stack, DragonBreed.getRandom(server.registryAccess(), server.overworld().getRandom()));
+            if (breed == null)
+                setBreed(stack, DragonBreed.getRandom(reg, RandomSource.create()));
       }
 
         private static void setBreed(ItemStack stack, Holder<DragonBreed> breed)

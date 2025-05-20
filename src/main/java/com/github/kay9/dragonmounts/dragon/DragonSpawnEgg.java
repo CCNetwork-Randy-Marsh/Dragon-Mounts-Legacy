@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -16,6 +17,7 @@ import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
@@ -24,6 +26,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeSpawnEggItem;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.commons.lang3.StringUtils;
 
@@ -51,14 +54,15 @@ public class DragonSpawnEgg extends ForgeSpawnEggItem
 
         // ensure a breed exists for this egg. if not, assign a random one.
         // possible cause is through commands, or other unnatural means.
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        RegistryOps<Tag> ops = server.registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        // todo: find a better way
+        RegistryAccess reg = DistExecutor.safeRunForDist(() -> Minecraft.getInstance().level::registryAccess, () -> ServerLifecycleHooks.getCurrentServer()::registryAccess);
+        RegistryOps<Tag> ops = reg.createSerializationContext(NbtOps.INSTANCE);
         Holder<DragonBreed> breed = stack.getOrDefault(DataComponents.ENTITY_DATA, CustomData.EMPTY)
                 .read(ops, DragonBreed.CODEC.fieldOf(TameableDragon.NBT_BREED))
                 .result()
                 .orElse(null);
         if (breed == null)
-            setBreed(stack, DragonBreed.getRandom(server.registryAccess(), server.overworld().getRandom()));
+            setBreed(stack, DragonBreed.getRandom(reg, RandomSource.create()));
     }
 
     private static void setBreed(ItemStack stack, Holder<DragonBreed> breed)

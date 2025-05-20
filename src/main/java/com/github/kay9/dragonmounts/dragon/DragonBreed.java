@@ -131,13 +131,11 @@ public record DragonBreed(int primaryColor, int secondaryColor, Optional<Particl
      * Obtain the loot table for this specific breed.
      * The loot table's namespace must match the breed's namespace.
      * {@code my_mod:my_breed} -> {@code my_mod:entities/dragon_breeds/my_breed}
-     * <br>
-     * DO NOT CACHE! LootTables are a reloadable resource!
-     * <br>
      * This is {@code Nullable} on purpose! If the table doesn't exist, fall back to the base dragon entity loot table.
      * Unmodified Dragon Mounts doesn't have a loot table for any breed or the base dragon, HOWEVER; if the base dragon
      * entity had a loot table via datapack, it can be overridden with a breed table, INCLUDING an empty one!
      */
+    // DO NOT CACHE! LootTables are a reloadable resource!
     @Nullable
     public static ResourceKey<LootTable> getLootTableKey(Holder<DragonBreed> b, ReloadableServerRegistries.Holder reg)
     {
