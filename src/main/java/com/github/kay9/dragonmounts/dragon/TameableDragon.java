@@ -56,7 +56,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -767,8 +766,14 @@ public class TameableDragon extends TamableAnimal implements Saddleable, FlyingA
     @Override
     protected ResourceKey<LootTable> getDefaultLootTable()
     {
-        if (getBreed() == null) return BuiltInLootTables.EMPTY;
-        return getBreed().deathLoot();
+        if (isServer() && getBreed() != null)
+        {
+            // needs to use server's reloadable resources; loot tables aren't present on the normal registry
+            ResourceKey<LootTable> table = DragonBreed.getLootTableKey(getBreedHolder(), level().getServer().reloadableRegistries());
+            if (table != null) return table;
+        }
+
+        return super.getDefaultLootTable();
     }
 
     //todo what was this for?

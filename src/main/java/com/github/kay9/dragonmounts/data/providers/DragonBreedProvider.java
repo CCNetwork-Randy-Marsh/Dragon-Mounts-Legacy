@@ -172,7 +172,7 @@ class DragonBreedProvider extends DatapackBuiltinEntriesProvider
 
     public static DragonBreed builtIn(int primaryColor, int secondaryColor, Optional<ParticleOptions> hatchParticles, Map<Holder<Attribute>, Double> attributes, List<Ability.Factory<? extends Ability>> abilities, List<Habitat> habitats, HolderSet<DamageType> immunities, Optional<Holder<SoundEvent>> ambientSound, Either<Integer, String> reproduction)
     {
-        return new DragonBreed(primaryColor, secondaryColor, hatchParticles, attributes, abilities, habitats, immunities, ambientSound, BuiltInLootTables.EMPTY, TameableDragon.BASE_GROWTH_TIME, HatchableEggBlock.DEFAULT_HATCH_CHANCE, TameableDragon.BASE_SIZE_MODIFIER, BuiltInRegistries.ITEM.getOrCreateTag(ItemTags.FISHES), BuiltInRegistries.ITEM.getOrCreateTag(ItemTags.FISHES), reproduction);
+        return new DragonBreed(primaryColor, secondaryColor, hatchParticles, attributes, abilities, habitats, immunities, ambientSound, TameableDragon.BASE_GROWTH_TIME, HatchableEggBlock.DEFAULT_HATCH_CHANCE, TameableDragon.BASE_SIZE_MODIFIER, BuiltInRegistries.ITEM.getOrCreateTag(ItemTags.FISHES), BuiltInRegistries.ITEM.getOrCreateTag(ItemTags.FISHES), reproduction);
     }
 
     @SuppressWarnings("unchecked")

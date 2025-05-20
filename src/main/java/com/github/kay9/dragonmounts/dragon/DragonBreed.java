@@ -24,6 +24,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.ReloadableServerRegistries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.RandomSource;
@@ -31,7 +32,6 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.LootTable;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,10 +41,10 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public record DragonBreed(int primaryColor, int secondaryColor, Optional<ParticleOptions> hatchParticles,
-                          Map<Holder<Attribute>, Double> attributes, List<Ability.Factory<? extends Ability>> abilityTypes, List<Habitat> habitats,
-                          HolderSet<DamageType> immunities, Optional<Holder<SoundEvent>> ambientSound,
-                          ResourceKey<LootTable> deathLoot, int growthTime, float hatchChance, float sizeModifier,
-                          HolderSet<Item> tamingItems, HolderSet<Item> breedingItems, Either<Integer, String> reproLimit)
+                          Map<Holder<Attribute>, Double> attributes, List<Ability.Factory<? extends Ability>> abilityTypes,
+                          List<Habitat> habitats, HolderSet<DamageType> immunities, Optional<Holder<SoundEvent>> ambientSound,
+                          int growthTime, float hatchChance, float sizeModifier, HolderSet<Item> tamingItems,
+                          HolderSet<Item> breedingItems, Either<Integer, String> reproLimit)
 {
     public static final ResourceKey<Registry<DragonBreed>> REGISTRY_KEY = ResourceKey.createRegistryKey(DragonMountsLegacy.id("dragon_breeds"));
 
@@ -57,7 +57,6 @@ public record DragonBreed(int primaryColor, int secondaryColor, Optional<Particl
             Habitat.CODEC.listOf().optionalFieldOf("habitats", ImmutableList.of()).forGetter(DragonBreed::habitats),
             RegistryCodecs.homogeneousList(Registries.DAMAGE_TYPE).optionalFieldOf("immunities", HolderSet.direct()).forGetter(DragonBreed::immunities),
             SoundEvent.CODEC.optionalFieldOf("ambient_sound").forGetter(DragonBreed::ambientSound),
-            ResourceKey.codec(Registries.LOOT_TABLE).optionalFieldOf("death_loot", BuiltInLootTables.EMPTY).forGetter(DragonBreed::deathLoot),
             Codec.INT.optionalFieldOf("growth_time", TameableDragon.BASE_GROWTH_TIME).forGetter(DragonBreed::growthTime),
             Codec.FLOAT.optionalFieldOf("hatch_chance", HatchableEggBlock.DEFAULT_HATCH_CHANCE).forGetter(DragonBreed::hatchChance),
             Codec.FLOAT.optionalFieldOf("size_modifier", TameableDragon.BASE_SIZE_MODIFIER).forGetter(DragonBreed::sizeModifier),
@@ -79,7 +78,7 @@ public record DragonBreed(int primaryColor, int secondaryColor, Optional<Particl
 
     public static DragonBreed fromNetwork(int primaryColor, int secondaryColor, Optional<ParticleOptions> hatchParticles, Optional<Holder<SoundEvent>> ambientSound, int growthTime, float sizeModifier)
     {
-        return new DragonBreed(primaryColor, secondaryColor, hatchParticles, Map.of(), List.of(), List.of(), HolderSet.direct(), ambientSound, BuiltInLootTables.EMPTY, growthTime, 0, sizeModifier, HolderSet.direct(), HolderSet.direct(), Either.left(0));
+        return new DragonBreed(primaryColor, secondaryColor, hatchParticles, Map.of(), List.of(), List.of(), HolderSet.direct(), ambientSound, growthTime, 0, sizeModifier, HolderSet.direct(), HolderSet.direct(), Either.left(0));
     }
 
     @Nullable
@@ -126,6 +125,31 @@ public record DragonBreed(int primaryColor, int secondaryColor, Optional<Particl
     {
         if (!breed.isBound()) return DMLRegistry.DRAGON.get().getDescription();
         return Component.translatable("dragon_breed." + breed.getRegisteredName().replace(':', '.'));
+    }
+
+    /**
+     * Obtain the loot table for this specific breed.
+     * The loot table's namespace must match the breed's namespace.
+     * {@code my_mod:my_breed} -> {@code my_mod:entities/dragon_breeds/my_breed}
+     * <br>
+     * DO NOT CACHE! LootTables are a reloadable resource!
+     * <br>
+     * This is {@code Nullable} on purpose! If the table doesn't exist, fall back to the base dragon entity loot table.
+     * Unmodified Dragon Mounts doesn't have a loot table for any breed or the base dragon, HOWEVER; if the base dragon
+     * entity had a loot table via datapack, it can be overridden with a breed table, INCLUDING an empty one!
+     */
+    @Nullable
+    public static ResourceKey<LootTable> getLootTableKey(Holder<DragonBreed> b, ReloadableServerRegistries.Holder reg)
+    {
+        if (b instanceof Holder.Reference<DragonBreed> breed)
+        {
+            Registry<LootTable> lootTables = reg.get().registryOrThrow(Registries.LOOT_TABLE);
+            ResourceLocation path = breed.key().location().withPrefix("entities/dragon_breeds/");
+            if (lootTables.containsKey(path))
+                return ResourceKey.create(Registries.LOOT_TABLE, path);
+        }
+
+        return null;
     }
 
     private void applyAttributes(TameableDragon dragon)
